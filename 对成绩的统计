@@ -1,0 +1,232 @@
+import xlrd3
+import xlwt3
+import os
+import tkinter.messagebox as tkMessagebox
+#本程序基于python3以及xlrd3和xlwt3模块建立，请在使用本程序前安装对应的模块
+
+
+#注意：
+#请把学生姓名写在(A,1)单元格
+#请把学生学号写在(B,1)单元格
+
+
+sheetidflag=1
+
+sheetnameflag=0
+
+sheetid=0
+
+sheetname="Sheet1"
+
+coltitle='B'
+
+colcate='D'
+
+colmark='C'
+
+colvalue='H'
+
+rowwork=3
+
+newfile="成绩统计结果.xls"
+
+newsheet="Sheet1"
+
+def getColnum(colvalue,rowvalue):
+    """
+    函数名：getColnum
+    输入： colvalue       
+                rowvalue       
+                ('A','3')
+    输出：(0,2)
+    功能：把单元格地址变成序号
+    """
+    dataX=int(rowvalue)-1
+    if len(str(colvalue))==1:
+        dataY=ord(colvalue)-65
+    elif len(str(colvalue))==2:
+        st=str(colvalue)[0]
+        nd=str(colvalue)[1]
+        stint=ord(st)-64
+        ndint=ord(nd)-65
+        dataY=stint*26+ndint
+    return(dataY,dataX)
+
+def buildTuple():
+    """
+    函数名：buildTuple
+    输入：无
+    输出：((科目名,学分,类别),(科目名,学分,类别))
+    功能：读取所有的科目，建立科目元组
+    """
+    global sheetid
+    global sheetidflag
+    global sheetname
+    global sheetnameflag
+    global rowwork
+    global coltitle
+    global colmark
+    global colcate
+    filelist=list(os.walk(os.getcwd()))[0][2]
+    aimfiles=list(filter(lambda n:n[-3:]=='xls',filelist))
+    subls=set()
+    
+    if sheetnameflag not in [1,0] or sheetidflag not in [1,0] or sheetnameflag==sheetidflag:
+        tkMessagebox.showinfo("消息","错误！程序参数有误！请检查程序参数。")
+    for everyfile in aimfiles:
+        data=xlrd3.open_workbook(everyfile)
+        if sheetidflag==1:
+            table = data.sheet_by_index(sheetid) 
+        else:
+            table = data.sheet_by_name(sheetname) 
+        titlecell=getColnum(coltitle,rowwork)
+        markcell=getColnum(colmark,rowwork)
+        catecell=getColnum(colcate,rowwork)
+       
+        titlels=table.col_values(titlecell[0])
+        markls=table.col_values(markcell[0])
+        catels=table.col_values(catecell[0])
+        
+        titlels=titlels[int(rowwork)-1:]
+        markls=markls[int(rowwork)-1:]
+        catels=catels[int(rowwork)-1:]
+        
+        templs=set(list(map(lambda x,y,z:(x,y,z),titlels,markls,catels)))
+        subls=subls|templs
+  
+    return tuple(subls)
+
+def buildDict():
+    """
+    函数名：buildDict
+    输入：无
+    输出：{科目名:学分,科目名:学分}
+    功能：通过科目元组，建立科目字典
+    """
+    subdict={}
+    subtuple=buildTuple()
+    for i in subtuple:
+        subdict[i[0]]=(i[1],i[2])
+    return subdict
+
+class Student:
+    def __init__(self,name,id,Adict,Bdict):
+        """
+        函数名：__init__
+        输入： name    
+                    id         
+                    Adict  
+                    Bdict  
+        输出：学生对象
+        功能：通过成绩单生成学生对象
+        """ 
+        self.name=name
+        self.id=id
+        self.Adict=Adict
+        self.Bdict=Bdict
+    
+def getGrade():
+    """
+    函数名：getGrade
+    输入：无
+    输出：学生对象列表
+    功能：通过成绩单生成学生对象列表
+    """ 
+    global sheetid
+    global sheetidflag
+    global sheetname
+    global sheetnameflag
+    global rowwork
+    global coltitle
+    global colvalue
+    filelist=list(os.walk(os.getcwd()))[0][2]
+    aimfiles=list(filter(lambda n:n[-3:]=='xls',filelist))
+    #检查参数正确性
+    if sheetnameflag not in [1,0] or sheetidflag not in [1,0] or sheetnameflag==sheetidflag:
+        tkMessagebox.showinfo("消息","错误！程序参数有误！请检查程序参数。")
+    stuls=[]
+    subdict=buildDict()
+    for everyfile in aimfiles:
+        data=xlrd3.open_workbook(everyfile)
+        if sheetidflag==1:
+            table = data.sheet_by_index(sheetid) 
+        else:
+            table = data.sheet_by_name(sheetname) 
+        stuname=table.cell_value(0,0)
+        stuid=table.cell_value(0,1)
+        adict={}
+        bdict={}
+        titlecell=getColnum(coltitle,rowwork)
+        valuecell=getColnum(colvalue,rowwork)
+        #得到科目名和学分列
+        titlels=table.col_values(titlecell[0])
+        valuels=table.col_values(valuecell[0])
+        #去掉无用行
+        titlels=titlels[int(rowwork)-1:]
+        valuels=valuels[int(rowwork)-1:]
+        templs=list(map(lambda x,y:(x,y),titlels,valuels))
+        for i in templs:
+            if subdict[i[0]][1]=='公共选修课':
+                bdict[i[0]]=i[1]
+            else:
+                adict[i[0]]=i[1]
+        stemp=Student(stuname,stuid,adict,bdict)
+        stuls.append(stemp)
+    return stuls[:]
+
+#填表格
+def fillBlank():
+    """
+    函数名：fillBlank
+    输入：无
+    输出：学生对象列表
+    功能：通过成绩单生成学生对象列表
+    """ 
+    global newfile
+    global newsheet
+    filexls=xlwt3.Workbook()
+    table = filexls.add_sheet(newsheet,cell_overwrite_ok=True)
+    #添加列标
+    subdict=buildDict()
+    subnamels=tuple(subdict.keys()
+    table.write(0,0,"姓名")
+    table.write(0,1,"学号")
+    table.write(0,2,"平均学分绩")
+    col=3
+    for i in subnamels:
+        table.write(0,col,i)
+        col=col+1
+    stuls=getGrade()
+    for i in stuls:
+        
+        table.write(stuls.index(i)+1,0,i.name)
+        table.write(stuls.index(i)+1,1,i.id)
+       
+        stuadict=i.Adict
+        stubdict=i.Bdict
+        notgx=0
+        notgxxf=0
+        gx=0
+        gxxf=0
+        nextposi=3
+        for iii in subnamels:
+            if iii in stuadict.keys(): 
+                table.write(stuls.index(i)+1,nextposi,stuadict[iii])
+                notgx=notgx+stuadict[iii]*subdict[iii][0]
+                notgxxf=notgxxf+subdict[iii][0]
+                nextposi=nextposi+1
+            elif iii in stubdict.keys():
+                table.write(stuls.index(i)+1,nextposi,stubdict[iii])
+                gx=gx+stubdict[iii]*subdict[iii][0]
+                gxxf=gxxf+subdict[iii][0]
+                nextposi=nextposi+1
+            else:
+                table.write(stuls.index(i)+1,nextposi,0
+                nextposi=nextposi+1
+        allgrade=notgx/notgxxf+(gx/gxxf)*0.005
+        table.write(stuls.index(i)+1,2,allgrade)
+    filexls.save(newfile)
+
+def main():
+    fillBlank()
+main()
