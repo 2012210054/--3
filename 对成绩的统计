@@ -9,34 +9,34 @@ import tkinter.messagebox as tkMessagebox
 #请把学生姓名写在(A,1)单元格
 #请把学生学号写在(B,1)单元格
 
-
+#如果按照sheetidflag进行拼接，则将sheetidflag置为1，否则置0
 sheetidflag=1
-
+#如果按照sheetnameflag进行拼接，则将sheetnameflag置为1，否则置0
 sheetnameflag=0
-
+#表单id，当sheetidflag=1时起作用
 sheetid=0
-
+#表单名称，当sheetnameflag=1时起作用
 sheetname="Sheet1"
-
+#科目所在的列标
 coltitle='B'
-
+#科目类别所在的列标
 colcate='D'
-
+#学分所在的列标
 colmark='C'
-
+#总评分所在的列标
 colvalue='H'
-
+#有效数据开始的行号
 rowwork=3
-
+#最后要得到的工作簿的名称
 newfile="成绩统计结果.xls"
-
+#最后要得到的工作表的名称
 newsheet="Sheet1"
 
 def getColnum(colvalue,rowvalue):
     """
     函数名：getColnum
-    输入： colvalue       
-                rowvalue       
+    输入： colvalue        #单元格的列表
+                rowvalue        #单元格的行号
                 ('A','3')
     输出：(0,2)
     功能：把单元格地址变成序号
@@ -70,7 +70,7 @@ def buildTuple():
     filelist=list(os.walk(os.getcwd()))[0][2]
     aimfiles=list(filter(lambda n:n[-3:]=='xls',filelist))
     subls=set()
-    
+    #检查参数正确性
     if sheetnameflag not in [1,0] or sheetidflag not in [1,0] or sheetnameflag==sheetidflag:
         tkMessagebox.showinfo("消息","错误！程序参数有误！请检查程序参数。")
     for everyfile in aimfiles:
@@ -82,18 +82,18 @@ def buildTuple():
         titlecell=getColnum(coltitle,rowwork)
         markcell=getColnum(colmark,rowwork)
         catecell=getColnum(colcate,rowwork)
-       
+        #得到科目名和学分列
         titlels=table.col_values(titlecell[0])
         markls=table.col_values(markcell[0])
         catels=table.col_values(catecell[0])
-        
+        #去掉无用行
         titlels=titlels[int(rowwork)-1:]
         markls=markls[int(rowwork)-1:]
         catels=catels[int(rowwork)-1:]
-        
+        #建立科目元组序列
         templs=set(list(map(lambda x,y,z:(x,y,z),titlels,markls,catels)))
         subls=subls|templs
-  
+    #返回元组，便于操作
     return tuple(subls)
 
 def buildDict():
@@ -113,10 +113,10 @@ class Student:
     def __init__(self,name,id,Adict,Bdict):
         """
         函数名：__init__
-        输入： name    
-                    id         
-                    Adict  
-                    Bdict  
+        输入： name    #学生姓名
+                    id          #学生学号
+                    Adict   #非公选课的成绩
+                    Bdict   #公选课的成绩
         输出：学生对象
         功能：通过成绩单生成学生对象
         """ 
@@ -152,10 +152,10 @@ def getGrade():
             table = data.sheet_by_index(sheetid) 
         else:
             table = data.sheet_by_name(sheetname) 
-        stuname=table.cell_value(0,0)
-        stuid=table.cell_value(0,1)
-        adict={}
-        bdict={}
+        stuname=table.cell_value(0,0)#学生姓名
+        stuid=table.cell_value(0,1)#学生学号
+        adict={}#非公选课
+        bdict={}#公选课
         titlecell=getColnum(coltitle,rowwork)
         valuecell=getColnum(colvalue,rowwork)
         #得到科目名和学分列
@@ -188,42 +188,47 @@ def fillBlank():
     table = filexls.add_sheet(newsheet,cell_overwrite_ok=True)
     #添加列标
     subdict=buildDict()
-    subnamels=tuple(subdict.keys()
+    subnamels=tuple(subdict.keys())#科目名称元组，避免改变顺序
     table.write(0,0,"姓名")
     table.write(0,1,"学号")
     table.write(0,2,"平均学分绩")
+	
+	
     col=3
     for i in subnamels:
         table.write(0,col,i)
         col=col+1
     stuls=getGrade()
     for i in stuls:
-        
+        #添加姓名和学号
         table.write(stuls.index(i)+1,0,i.name)
         table.write(stuls.index(i)+1,1,i.id)
-       
+        #添加成绩
         stuadict=i.Adict
         stubdict=i.Bdict
-        notgx=0
-        notgxxf=0
-        gx=0
-        gxxf=0
-        nextposi=3
+        notgx=0#非公选课成绩
+        notgxxf=0#非公选课学分    		
+		gx=0#公选课成绩
+        gxxf=0#公选课学分		
+        nextposi=3#表格位置
         for iii in subnamels:
             if iii in stuadict.keys(): 
                 table.write(stuls.index(i)+1,nextposi,stuadict[iii])
-                notgx=notgx+stuadict[iii]*subdict[iii][0]
-                notgxxf=notgxxf+subdict[iii][0]
-                nextposi=nextposi+1
+                notgx=notgx+stuadict[iii]*subdict[iii][0]#累计非公选课成绩
+                notgxxf=notgxxf+subdict[iii][0]#累计非公选课学分				
+                nextposi=nextposi+1#下一门课
             elif iii in stubdict.keys():
                 table.write(stuls.index(i)+1,nextposi,stubdict[iii])
-                gx=gx+stubdict[iii]*subdict[iii][0]
-                gxxf=gxxf+subdict[iii][0]
-                nextposi=nextposi+1
+                gx=gx+stubdict[iii]*subdict[iii][0]#累计公选课成绩
+                gxxf=gxxf+subdict[iii][0]#累计公选课学分
+                nextposi=nextposi+1#下一门课
             else:
-                table.write(stuls.index(i)+1,nextposi,0
-                nextposi=nextposi+1
-        allgrade=notgx/notgxxf+(gx/gxxf)*0.005
+                table.write(stuls.index(i)+1,nextposi,0)#不存在的课补0
+                nextposi=nextposi+1#下一门课
+        
+	
+		allgrade=notgx/notgxxf+gx/gxxf*0.005
+		
         table.write(stuls.index(i)+1,2,allgrade)
     filexls.save(newfile)
 
